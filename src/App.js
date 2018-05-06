@@ -91,63 +91,38 @@ class App extends Component {
 }
 
 // Functional react components are used when we don't need state
-function Search(props) {
-    const {
-        searchTerm,
-        onSearchChange,
-        children
-    } = props;
+const Search = ({searchTerm, onSearchChange, children}) =>
     // Children represent what's inside of a component when used
     // E.G., text, more components, elements, etc.   
-    return(
-        <form>
-            {children} <input type='text'
-            value={searchTerm}
-            onChange={onSearchChange}/>
-        </form>
-    );
-}
+    <form>
+        {children} <input type='text'
+        value={searchTerm}
+        onChange={onSearchChange}/>
+    </form>
 
-function Table(props) {
-    const {
-        list,
-        searchTerm,
-        onDismiss
-    } = props;
-        
-    return(
-        <div>
-        {list.filter(isSearched(searchTerm)).map((item) =>
-            <div key={item.objectID}>
-                <span>
-                    <a href={item.url}>{item.title}</a>
-                </span>
-                <span> {item.author}</span>
-                <span> {item.num_comments}</span>
-                <span> {item.points}</span>
-                <Button onClick={() => onDismiss(item.objectID)}>
-                    Dismiss
-                </Button>
-            </div>
-        )}
+const Table = ({list, searchTerm, onDismiss}) =>
+    <div>
+    {list.filter(isSearched(searchTerm)).map((item) =>
+        <div key={item.objectID}>
+            <span>
+                <a href={item.url}>{item.title}</a>
+            </span>
+            <span> {item.author}</span>
+            <span> {item.num_comments}</span>
+            <span> {item.points}</span>
+            <Button onClick={() => onDismiss(item.objectID)}>
+                Dismiss
+            </Button>
         </div>
-    );
-}
+    )}
+    </div>
 
-function Button(props) {
-    const {
-        onClick,
-        className = '',
-        children
-    } = props;
-    return(
-        <button
-            onClick={onClick}
-            className={className}
-            type='button'>
-            {children}
-        </button>
-    );
-}
+const Button = ({onClick, className = '', children}) =>
+    <button
+        onClick={onClick}
+        className={className}
+        type='button'>
+        {children}
+    </button>
 
 export default App;
