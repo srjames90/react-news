@@ -11,12 +11,6 @@ const PARAM_SEARCH = 'query=';
 
 const url = `${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${DEFAULT_QUERY}`;
 
-function isSearched(searchTerm) {
-    // Returned function has access to both item and searchTerm
-    return item => item.title
-    .toLowerCase().includes(searchTerm.toLowerCase());
-}
-
 class App extends Component {
     constructor(props) {
         // "this" not allowed in constructor prior to super call
@@ -31,6 +25,8 @@ class App extends Component {
         this.onDismiss = this.onDismiss.bind(this);
         this.onSearchChange = this.onSearchChange.bind(this);
         this.setSearchTopStories = this.setSearchTopStories.bind(this);
+        this.onSearchSubmit = this.onSearchSubmit.bind(this);
+        this.fetchSearchTopStories = this.fetchSearchTopStories.bind(this);
     }
 
     onDismiss(id) {
@@ -42,14 +38,28 @@ class App extends Component {
         this.setState({result: updatedResult});
     }
 
-
     // Used as part of the synthetic React event, so get an event
     onSearchChange(event) {
         this.setState({searchTerm: event.target.value});
     }
+
     // Set the results of the api
     setSearchTopStories(result) {
         this.setState({result});
+    }
+
+    // Perform a new search
+    onSearchSubmit() {
+        const {searchTerm} = this.state;
+        // Do the fetch
+        this.fetchSearchTopStories(searchTerm);
+    }
+
+    fetchSearchTopStories(searchTerm) {
+        fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}`)
+        .then(response => response.json())
+        .then(result => this.setSearchTopStories(result))
+        .catch(error => error);
     }
 
     // Component did mount gets called after render and gets called only once
@@ -57,10 +67,7 @@ class App extends Component {
         const {searchTerm} = this.state;
 
         // Make fetch to API
-        fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}`)
-        .then(response => response.json())
-        .then(result => this.setSearchTopStories(result))
-        .catch(error => error);
+        this.fetchSearchTopStories(searchTerm);
     }
 
     render() {
@@ -79,6 +86,7 @@ class App extends Component {
             searchTerm
         } = this.state;
 
+        // returns null when there aren't any results
         if (!result) { return null;}
        
         return (
@@ -88,27 +96,32 @@ class App extends Component {
                         + user.firstName + ' ' + user.lastName } </h1>
                 </header>
                 <div className='interactions'>
-                    <Search searchTerm={searchTerm} onSearchChange={this.onSearchChange}>
+                    <Search searchTerm={searchTerm}
+                    onChange={this.onSearchChange}
+                    onClick={this.onSearchSubmit}>
                     Search
                     </Search>
                 </div>
-                <Table list={result.hits} searchTerm={searchTerm} onDismiss={this.onDismiss}/>
+                <Table list={result.hits} onDismiss={this.onDismiss}/>
             </div>
         );
     }
 }
 
 // Functional react components are used when we don't need state
-const Search = ({searchTerm, onSearchChange, children}) =>
+const Search = ({searchTerm, onChange, onClick, children}) =>
     // Children represent what's inside of a component when used
     // E.G., text, more components, elements, etc.   
     <form>
         {children} <input type='text'
         value={searchTerm}
-        onChange={onSearchChange}/>
+        onChange={onChange}/>
+        <Button onClick={onClick}>
+            Submit
+        </Button>
     </form>
 
-const Table = ({list, searchTerm, onDismiss}) => {
+const Table = ({list, onDismiss}) => {
 
     // Inline style variable examples
     const largeColumn = {
@@ -125,7 +138,7 @@ const Table = ({list, searchTerm, onDismiss}) => {
 
     return(
         <div className='table'>
-        {list.filter(isSearched(searchTerm)).map((item) =>
+        {list.map((item) =>
             <div key={item.objectID} className='table-row'>
                 <span style={largeColumn}>
                     <a href={item.url}>{item.title}</a>
