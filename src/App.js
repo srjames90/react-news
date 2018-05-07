@@ -2,6 +2,15 @@ import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
 
+// Set strings for API call
+const DEFAULT_QUERY = 'redux';
+
+const PATH_BASE = 'https://hn.algolia.com/api/v1';
+const PATH_SEARCH = '/search';
+const PARAM_SEARCH = 'query=';
+
+const url = `${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${DEFAULT_QUERY}`;
+
 function isSearched(searchTerm) {
     // Returned function has access to both item and searchTerm
     return item => item.title
@@ -12,51 +21,46 @@ class App extends Component {
     constructor(props) {
         // "this" not allowed in constructor prior to super call
         super(props);
-        // Render list example
-        // Remember, each element need a key
-        const list = [
-            {
-                title: 'React',
-                url: 'https://facebook.github.io/react/',
-                author: 'Jordan Walke',
-                num_comments: 3,
-                points: 4,
-                objectID: 0
-            },
-            {
-                title: 'Redux',
-                url: 'https://github.com/reactjs/redux',
-                author: 'Dan Abramov, Andrew Clark',
-                num_comments: 2,
-                points: 5,
-                objectID: 1
-            }
-        ];
+        
         // Set state
         this.state = {
-            list,
-            searchTerm: ''
+            result: null,
+            searchTerm: DEFAULT_QUERY
         };
         // Bindings
         this.onDismiss = this.onDismiss.bind(this);
         this.onSearchChange = this.onSearchChange.bind(this);
-        this.search
+        this.setSearchTopStories = this.setSearchTopStories.bind(this);
     }
 
     onDismiss(id) {
         const isNotId = item => item.objectID !== id;
-        const updatedList = this.state.list.filter(isNotId);
+        const updatedHits = this.state.result.hits.filter(isNotId);
+        // Creates new object with state result, uses the object spread to copy and update this.result
+        const updatedResult = {...this.state.result, hits: updatedHits};
         // Replace list (avoids mutating old list and adhering to React conventions)
-        this.setState({list: updatedList});
+        this.setState({result: updatedResult});
     }
 
 
     // Used as part of the synthetic React event, so get an event
     onSearchChange(event) {
-        // Why?
         this.setState({searchTerm: event.target.value});
-        // Try something different, then comment out
+    }
+    // Set the results of the api
+    setSearchTopStories(result) {
+        this.setState({result});
+    }
 
+    // Component did mount gets called after render and gets called only once
+    componentDidMount() {
+        const {searchTerm} = this.state;
+
+        // Make fetch to API
+        fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}`)
+        .then(response => response.json())
+        .then(result => this.setSearchTopStories(result))
+        .catch(error => error);
     }
 
     render() {
@@ -71,20 +75,24 @@ class App extends Component {
 
         // destructure this.state
         const {
-            list,
+            result,
             searchTerm
         } = this.state;
+
+        if (!result) { return null;}
        
         return (
-            <div className="App">
+            <div className="page">
                 <header className="App-header">
                     <h1 className="App-title">{helloWorld + ', '
                         + user.firstName + ' ' + user.lastName } </h1>
                 </header>
-                <Search searchTerm={searchTerm} onSearchChange={this.onSearchChange}>
-                Search
-                </Search>
-                <Table list={list} searchTerm={searchTerm} onDismiss={this.onDismiss}/>
+                <div className='interactions'>
+                    <Search searchTerm={searchTerm} onSearchChange={this.onSearchChange}>
+                    Search
+                    </Search>
+                </div>
+                <Table list={result.hits} searchTerm={searchTerm} onDismiss={this.onDismiss}/>
             </div>
         );
     }
@@ -100,22 +108,41 @@ const Search = ({searchTerm, onSearchChange, children}) =>
         onChange={onSearchChange}/>
     </form>
 
-const Table = ({list, searchTerm, onDismiss}) =>
-    <div>
-    {list.filter(isSearched(searchTerm)).map((item) =>
-        <div key={item.objectID}>
-            <span>
-                <a href={item.url}>{item.title}</a>
-            </span>
-            <span> {item.author}</span>
-            <span> {item.num_comments}</span>
-            <span> {item.points}</span>
-            <Button onClick={() => onDismiss(item.objectID)}>
-                Dismiss
-            </Button>
+const Table = ({list, searchTerm, onDismiss}) => {
+
+    // Inline style variable examples
+    const largeColumn = {
+        width: '40%'
+    }
+
+    const midColumn = {
+        width: '30%'
+    }
+
+    const smallColumn = {
+        width: '10%'
+    }
+
+    return(
+        <div className='table'>
+        {list.filter(isSearched(searchTerm)).map((item) =>
+            <div key={item.objectID} className='table-row'>
+                <span style={largeColumn}>
+                    <a href={item.url}>{item.title}</a>
+                </span>
+                <span style={midColumn}> {item.author}</span>
+                <span style={smallColumn}> {item.num_comments}</span>
+                <span style={smallColumn}> {item.points}</span>
+                <span>
+                    <Button onClick={() => onDismiss(item.objectID)} className='button-inline'>
+                        Dismiss
+                    </Button>
+                </span>
+            </div>
+        )}
         </div>
-    )}
-    </div>
+    );
+}
 
 const Button = ({onClick, className = '', children}) =>
     <button
