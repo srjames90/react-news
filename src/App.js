@@ -4,10 +4,13 @@ import './App.css';
 
 // Set strings for API call
 const DEFAULT_QUERY = 'redux';
+const DEFAULT_HPP = '100';
 
 const PATH_BASE = 'https://hn.algolia.com/api/v1';
 const PATH_SEARCH = '/search';
 const PARAM_SEARCH = 'query=';
+const PARAM_PAGE = 'page=';
+const PARAM_HPP = 'hitsPerPage=';
 
 const url = `${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${DEFAULT_QUERY}`;
 
@@ -45,18 +48,29 @@ class App extends Component {
 
     // Set the results of the api
     setSearchTopStories(result) {
-        this.setState({result});
+        // extracts hits and page from results
+        const {hits, page} = result;
+        // gets the current results object if it exists
+        const oldHits = page !== 0
+            ? this.state.result.hits : [];
+        // Apends the old hits with the new hits
+        const updatedHits = [...oldHits, ...hits];
+        // Set the new hits and the page
+        this.setState({
+            result: {hits: updatedHits, page}
+        });
     }
 
     // Perform a new search
-    onSearchSubmit() {
+    onSearchSubmit(event) {
         const {searchTerm} = this.state;
         // Do the fetch
         this.fetchSearchTopStories(searchTerm);
+        event.preventDefault();
     }
 
-    fetchSearchTopStories(searchTerm) {
-        fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}`)
+    fetchSearchTopStories(searchTerm, page = 0) {
+        fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`)
         .then(response => response.json())
         .then(result => this.setSearchTopStories(result))
         .catch(error => error);
@@ -86,6 +100,9 @@ class App extends Component {
             searchTerm
         } = this.state;
 
+        // Add paginaton
+        const page = (result && result.page) || 0;
+
         // returns null when there aren't any results
         if (!result) { return null;}
        
@@ -98,27 +115,32 @@ class App extends Component {
                 <div className='interactions'>
                     <Search searchTerm={searchTerm}
                     onChange={this.onSearchChange}
-                    onClick={this.onSearchSubmit}>
+                    onSubmit={this.onSearchSubmit}>
                     Search
                     </Search>
                 </div>
                 <Table list={result.hits} onDismiss={this.onDismiss}/>
+                <div className='interacitons'>
+                    <Button onClick={() => this.fetchSearchTopStories(searchTerm, page + 1)}>
+                        Next
+                    </Button>
+                </div>
             </div>
         );
     }
 }
 
 // Functional react components are used when we don't need state
-const Search = ({searchTerm, onChange, onClick, children}) =>
+const Search = ({searchTerm, onChange, onSubmit, children}) =>
     // Children represent what's inside of a component when used
     // E.G., text, more components, elements, etc.   
-    <form>
+    <form onSubmit={onSubmit}>
         {children} <input type='text'
         value={searchTerm}
         onChange={onChange}/>
-        <Button onClick={onClick}>
+        <button type='submit'>
             Submit
-        </Button>
+        </button>
     </form>
 
 const Table = ({list, onDismiss}) => {
