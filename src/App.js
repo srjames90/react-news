@@ -19,9 +19,10 @@ class App extends Component {
         // "this" not allowed in constructor prior to super call
         super(props);
         
-        // Set state
+        // Set state (searchKey represents current query)
         this.state = {
-            result: null,
+            results: null,
+            searchKey: '',
             searchTerm: DEFAULT_QUERY
         };
         // Bindings
@@ -30,15 +31,20 @@ class App extends Component {
         this.setSearchTopStories = this.setSearchTopStories.bind(this);
         this.onSearchSubmit = this.onSearchSubmit.bind(this);
         this.fetchSearchTopStories = this.fetchSearchTopStories.bind(this);
+        this.needsToSearchTopStories = this.needsToSearchTopStories.bind(this);
     }
 
     onDismiss(id) {
+        const {searchKey, results} = this.state;
+        const{hits, page} = results[searchKey];
         const isNotId = item => item.objectID !== id;
-        const updatedHits = this.state.result.hits.filter(isNotId);
-        // Creates new object with state result, uses the object spread to copy and update this.result
-        const updatedResult = {...this.state.result, hits: updatedHits};
+        const updatedHits = hits.filter(isNotId);
         // Replace list (avoids mutating old list and adhering to React conventions)
-        this.setState({result: updatedResult});
+        this.setState({results: {...results, [searchKey]: {hits: updatedHits, page}}});
+    }
+
+    needsToSearchTopStories(searchTerm) {
+        return !this.state.results[searchTerm];
     }
 
     // Used as part of the synthetic React event, so get an event
@@ -50,22 +56,32 @@ class App extends Component {
     setSearchTopStories(result) {
         // extracts hits and page from results
         const {hits, page} = result;
+        const {searchKey, results} = this.state;
+
         // gets the current results object if it exists
-        const oldHits = page !== 0
-            ? this.state.result.hits : [];
+        const oldHits = results && results[searchKey]
+            ? results[searchKey].hits : [];
         // Apends the old hits with the new hits
         const updatedHits = [...oldHits, ...hits];
         // Set the new hits and the page
         this.setState({
-            result: {hits: updatedHits, page}
+            results: {
+                ...results,
+                [searchKey]: {hits: updatedHits, page}
+            }
         });
     }
 
     // Perform a new search
     onSearchSubmit(event) {
-        const {searchTerm} = this.state;
-        // Do the fetch
-        this.fetchSearchTopStories(searchTerm);
+        const {results, searchTerm} = this.state;
+        // Set searchKey...state is changed, so will call render
+        this.setState({searchKey: searchTerm});
+        // Check if in cache
+        if (this.needsToSearchTopStories(searchTerm)) {
+            // Do the fetch
+            this.fetchSearchTopStories(searchTerm);
+        }
         event.preventDefault();
     }
 
@@ -79,7 +95,8 @@ class App extends Component {
     // Component did mount gets called after render and gets called only once
     componentDidMount() {
         const {searchTerm} = this.state;
-
+        // Set search key
+        this.setState({searchKey: searchTerm});
         // Make fetch to API
         this.fetchSearchTopStories(searchTerm);
     }
@@ -96,15 +113,15 @@ class App extends Component {
 
         // destructure this.state
         const {
-            result,
-            searchTerm
+            results,
+            searchTerm,
+            searchKey
         } = this.state;
 
         // Add paginaton
-        const page = (result && result.page) || 0;
-
-        // returns null when there aren't any results
-        if (!result) { return null;}
+        const page = (results && results[searchKey] && results[searchKey].page) || 0;
+        // Get the results
+        const list = (results && results[searchKey] && results[searchKey].hits) || [];
        
         return (
             <div className="page">
@@ -119,9 +136,9 @@ class App extends Component {
                     Search
                     </Search>
                 </div>
-                <Table list={result.hits} onDismiss={this.onDismiss}/>
+                <Table list={list} onDismiss={this.onDismiss}/>
                 <div className='interacitons'>
-                    <Button onClick={() => this.fetchSearchTopStories(searchTerm, page + 1)}>
+                    <Button onClick={() => this.fetchSearchTopStories(searchKey, page + 1)}>
                         Next
                     </Button>
                 </div>
