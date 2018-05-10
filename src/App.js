@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
+import axios from 'axios';
 import './App.css';
 
 // Set strings for API call
@@ -11,8 +11,6 @@ const PATH_SEARCH = '/search';
 const PARAM_SEARCH = 'query=';
 const PARAM_PAGE = 'page=';
 const PARAM_HPP = 'hitsPerPage=';
-
-const url = `${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${DEFAULT_QUERY}`;
 
 class App extends Component {
     constructor(props) {
@@ -75,7 +73,7 @@ class App extends Component {
 
     // Perform a new search
     onSearchSubmit(event) {
-        const {results, searchTerm} = this.state;
+        const {searchTerm} = this.state;
         // Set searchKey...state is changed, so will call render
         this.setState({searchKey: searchTerm});
         // Check if in cache
@@ -87,9 +85,8 @@ class App extends Component {
     }
 
     fetchSearchTopStories(searchTerm, page = 0) {
-        fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`)
-        .then(response => response.json())
-        .then(result => this.setSearchTopStories(result))
+        axios(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`)
+        .then(result => this.setSearchTopStories(result.data))
         .catch(error => this.setState({error}));
     }
 
